@@ -1,8 +1,10 @@
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { Env } from './env';
 import { User } from '../../user/entities/user.entity';
+import { Evidence, EvidenceVersion } from '../../evidence/entities';
+import { AuditLog } from '../../audit/entities';
 
-export const entities = [User];
+export const entities = [User, Evidence, EvidenceVersion, AuditLog];
 
 export const databaseConfig: TypeOrmModuleOptions = {
   type: 'sqlite',
