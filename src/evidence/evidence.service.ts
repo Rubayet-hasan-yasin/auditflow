@@ -36,7 +36,7 @@ export class EvidenceService {
     // Create initial version (v1)
     const version = this.versionRepository.create({
       evidenceId: savedEvidence.id,
-      versionNumber: 1,
+      version: 1,
       notes: dto.notes || '',
       expiry: dto.expiry,
     });
@@ -86,15 +86,15 @@ export class EvidenceService {
     // Get latest version number
     const latestVersion = await this.versionRepository.findOne({
       where: { evidenceId },
-      order: { versionNumber: 'DESC' },
+      order: { version: 'DESC' },
     });
 
-    const nextVersionNumber = (latestVersion?.versionNumber || 0) + 1;
+    const nextVersionNumber = (latestVersion?.version || 0) + 1;
 
     // Create new version
     const newVersion = this.versionRepository.create({
       evidenceId,
-      versionNumber: nextVersionNumber,
+      version: nextVersionNumber,
       notes: dto.notes,
       expiry: dto.expiry,
     });

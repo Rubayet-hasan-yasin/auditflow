@@ -7,6 +7,7 @@ import { UserModule } from './user/user.module';
 import { HelperModule } from './helper/helper.module';
 import { EvidenceModule } from './evidence/evidence.module';
 import { AuditModule } from './audit/audit.module';
+import { RequestModule } from './request/request.module';
 import { databaseConfig } from './helper/config';
 
 @Module({
@@ -17,6 +18,7 @@ import { databaseConfig } from './helper/config';
     AuthModule,
     EvidenceModule,
     AuditModule,
+    RequestModule,
   ],
   controllers: [AppController],
   providers: [AppService],

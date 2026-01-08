@@ -26,6 +26,15 @@ A backend service for managing buyer requests, factory evidence, and audit workf
 - ✅ Structured metadata storage
 - ✅ Query and filter audit logs
 
+### Phase 4: Buyer Request Workflow (Task AA) 🆕
+- ✅ Buyers create requests with multiple items for factories
+- ✅ Factories view requests assigned to them (GET /factory/requests)
+- ✅ Factories fulfill request items with evidence
+- ✅ Automatic request completion when all items fulfilled
+- ✅ Status tracking (OPEN → COMPLETED for requests, PENDING → FULFILLED for items)
+- ✅ Comprehensive audit logging for all request actions
+- ✅ Security: Factory ID validation, evidence ownership checks
+
 ---
 
 ## What's Inside
@@ -61,6 +70,13 @@ src/
 │   ├── evidence.controller.ts
 │   ├── evidence.module.ts
 │   └── evidence.service.ts
+│
+├── request/                 # Buyer request workflow (Task AA) 🆕
+│   ├── dto/                 # Request & fulfill DTOs
+│   ├── entities/            # Request & RequestItem entities
+│   ├── request.controller.ts
+│   ├── request.module.ts
+│   └── request.service.ts
 │
 ├── audit/                   # Audit logging
 │   ├── entities/            # AuditLog entity
@@ -237,6 +253,251 @@ curl -X DELETE http://localhost:3000/evidence/550e8400-e29b-41d4-a716-4466554400
   -H "Authorization: Bearer $FACTORY_TOKEN"
 ```
 
+---
+
+## 🆕 Task AA: Buyer Request Workflow
+
+This section covers the new **Buyer Request Workflow** feature that allows buyers to create requests for factories and factories to fulfill those requests with evidence.
+
+### Workflow Overview
+
+1. **Buyer creates a request** with multiple items (different document types)
+2. **Factory views all requests** assigned to them
+3. **Factory fulfills items** by attaching evidence to each item
+4. **Request auto-completes** when all items are fulfilled
+5. **All actions are audit-logged**
+
+### API Endpoints
+
+#### 1. Create Request (Buyer)
+**POST /requests**
+
+Buyers create requests for factories with multiple document items.
+
+```bash
+export BUYER_TOKEN=$(curl -s -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"buyer@auditflow.com","password":"buyer123"}' | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
+
+curl -X POST http://localhost:3000/requests \
+  -H "Authorization: Bearer $BUYER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "factoryId": "F001",
+    "title": "Q1 2025 Compliance Evidence",
+    "items": [
+      {"docType": "Certificate"},
+      {"docType": "Test Report"},
+      {"docType": "Audit Report"}
+    ]
+  }'
+```
+
+**Response:**
+```json
+{
+  "id": "req_abc123",
+  "buyerId": "user_xyz",
+  "factoryId": "F001",
+  "title": "Q1 2025 Compliance Evidence",
+  "status": "OPEN",
+  "items": [
+    {"id": "item_1", "docType": "Certificate", "status": "PENDING"},
+    {"id": "item_2", "docType": "Test Report", "status": "PENDING"},
+    {"id": "item_3", "docType": "Audit Report", "status": "PENDING"}
+  ],
+  "createdAt": "2026-01-08T12:00:00.000Z",
+  "updatedAt": "2026-01-08T12:00:00.000Z"
+}
+```
+
+#### 2. Get Buyer's Requests (Buyer)
+**GET /requests**
+
+Buyers view all their own requests with items.
+
+```bash
+curl -X GET http://localhost:3000/requests \
+  -H "Authorization: Bearer $BUYER_TOKEN"
+```
+
+**Response:**
+```json
+[
+  {
+    "id": "req_abc123",
+    "factoryId": "F001",
+    "title": "Q1 2025 Compliance Evidence",
+    "status": "OPEN",
+    "items": [
+      {"id": "item_1", "docType": "Certificate", "status": "FULFILLED", "evidenceId": "ev_1", "versionId": "v_1"},
+      {"id": "item_2", "docType": "Test Report", "status": "PENDING"},
+      {"id": "item_3", "docType": "Audit Report", "status": "PENDING"}
+    ]
+  }
+]
+```
+
+#### 3. Get Factory's Requests (Factory)
+**GET /factory/requests**
+
+Factories view all requests assigned to them.
+
+```bash
+export FACTORY_TOKEN=$(curl -s -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"factory1@auditflow.com","password":"factory123"}' | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
+
+curl -X GET http://localhost:3000/factory/requests \
+  -H "Authorization: Bearer $FACTORY_TOKEN"
+```
+
+**Response:**
+```json
+[
+  {
+    "id": "req_abc123",
+    "buyerId": "user_xyz",
+    "title": "Q1 2025 Compliance Evidence",
+    "status": "OPEN",
+    "items": [
+      {"id": "item_1", "docType": "Certificate", "status": "PENDING"},
+      {"id": "item_2", "docType": "Test Report", "status": "PENDING"}
+    ]
+  }
+]
+```
+
+#### 4. Fulfill Request Item (Factory)
+**POST /requests/:requestId/items/:itemId/fulfill**
+
+Factories fulfill individual items by attaching evidence.
+
+```bash
+# First, create evidence if you don't have one
+curl -X POST http://localhost:3000/evidence \
+  -H "Authorization: Bearer $FACTORY_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name":"ISO 9001 Certificate",
+    "docType":"Certificate",
+    "expiry":"2026-12-31"
+  }'
+
+# Use the evidenceId and versionId from the response
+curl -X POST http://localhost:3000/requests/req_abc123/items/item_1/fulfill \
+  -H "Authorization: Bearer $FACTORY_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "evidenceId": "ev_550e8400",
+    "versionId": "ver_660e8400"
+  }'
+```
+
+**Response:**
+```json
+{
+  "request": {
+    "id": "req_abc123",
+    "status": "OPEN",
+    "updatedAt": "2026-01-08T12:30:00.000Z"
+  },
+  "item": {
+    "id": "item_1",
+    "status": "FULFILLED",
+    "evidenceId": "ev_550e8400",
+    "versionId": "ver_660e8400",
+    "updatedAt": "2026-01-08T12:30:00.000Z"
+  }
+}
+```
+
+### Status Flow
+
+**Request Status:**
+- `OPEN` — Initial state, has pending items
+- `COMPLETED` — All items have been fulfilled
+
+**Request Item Status:**
+- `PENDING` — Waiting for factory to fulfill
+- `FULFILLED` — Factory has attached evidence
+
+### Security Rules
+
+1. **Factory ID Validation:** Only factories can fulfill requests for their own factoryId
+2. **Evidence Ownership:** Factories can only use evidence they own
+3. **Role Guards:** Buyers can only create/view requests, factories can only view/fulfill
+4. **Audit Logging:** All actions (CREATE_REQUEST, VIEW_REQUESTS, FULFILL_ITEM) are logged
+
+### Audit Actions
+
+The following actions are logged for requests:
+- `CREATE_REQUEST` — When buyer creates a request
+- `VIEW_REQUESTS` — When factory views their requests
+- `FULFILL_ITEM` — When factory fulfills an item
+
+**View audit logs:**
+```bash
+curl -X GET http://localhost:3000/audit \
+  -H "Authorization: Bearer $FACTORY_TOKEN"
+```
+
+### Complete Test Workflow
+
+```bash
+# 1. Register users
+curl -X POST http://localhost:3000/auth/register -H "Content-Type: application/json" \
+  -d '{"email":"buyer@test.com","password":"Pass123!","firstName":"John","lastName":"Buyer","role":"buyer"}'
+
+curl -X POST http://localhost:3000/auth/register -H "Content-Type: application/json" \
+  -d '{"email":"factory@test.com","password":"Pass123!","firstName":"Jane","lastName":"Factory","role":"factory","factoryId":"F001"}'
+
+# 2. Login and get tokens
+BUYER_TOKEN=$(curl -s -X POST http://localhost:3000/auth/login -H "Content-Type: application/json" \
+  -d '{"email":"buyer@test.com","password":"Pass123!"}' | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
+
+FACTORY_TOKEN=$(curl -s -X POST http://localhost:3000/auth/login -H "Content-Type: application/json" \
+  -d '{"email":"factory@test.com","password":"Pass123!"}' | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
+
+# 3. Factory creates evidence
+EVIDENCE_RESPONSE=$(curl -s -X POST http://localhost:3000/evidence \
+  -H "Authorization: Bearer $FACTORY_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"ISO 9001","docType":"Certificate","expiry":"2026-12-31"}')
+
+EVIDENCE_ID=$(echo $EVIDENCE_RESPONSE | grep -o '"evidenceId":"[^"]*' | cut -d'"' -f4)
+VERSION_ID=$(echo $EVIDENCE_RESPONSE | grep -o '"versionId":"[^"]*' | cut -d'"' -f4)
+
+# 4. Buyer creates request
+REQUEST_RESPONSE=$(curl -s -X POST http://localhost:3000/requests \
+  -H "Authorization: Bearer $BUYER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"factoryId":"F001","title":"Q1 2025 Compliance","items":[{"docType":"Certificate"}]}')
+
+REQUEST_ID=$(echo $REQUEST_RESPONSE | grep -o '"id":"[^"]*' | head -1 | cut -d'"' -f4)
+ITEM_ID=$(echo $REQUEST_RESPONSE | grep -o '"items":\[{"id":"[^"]*' | cut -d'"' -f8)
+
+# 5. Factory views requests
+curl -X GET http://localhost:3000/factory/requests \
+  -H "Authorization: Bearer $FACTORY_TOKEN"
+
+# 6. Factory fulfills item
+curl -X POST "http://localhost:3000/requests/$REQUEST_ID/items/$ITEM_ID/fulfill" \
+  -H "Authorization: Bearer $FACTORY_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"evidenceId\":\"$EVIDENCE_ID\",\"versionId\":\"$VERSION_ID\"}"
+
+# 7. Buyer checks status
+curl -X GET http://localhost:3000/requests \
+  -H "Authorization: Bearer $BUYER_TOKEN"
+
+# 8. View audit logs
+curl -X GET http://localhost:3000/audit \
+  -H "Authorization: Bearer $FACTORY_TOKEN"
+```
+
+---
+
 ### Quick one-liner test
 
 Login and see the response:
@@ -274,15 +535,18 @@ Every action in the system is logged with complete context:
 - `timestamp` — When the action occurred
 - `actorUserId` — Who performed the action
 - `actorRole` — User's role (factory, buyer, admin)
-- `action` — Type of action (CREATE_EVIDENCE, ADD_VERSION, etc.)
-- `objectType` — What was affected (Evidence, Version, Request)
+- `action` — Type of action (CREATE_EVIDENCE, ADD_VERSION, CREATE_REQUEST, FULFILL_ITEM, etc.)
+- `objectType` — What was affected (Evidence, Version, Request, RequestItem)
 - `objectId` — ID of the affected object
-- `metadata` — Additional context (factoryId, docType, version number, etc.)
+- `metadata` — Additional context (factoryId, docType, version number, request status, etc.)
 
 **Logged Actions:**
 - `CREATE_EVIDENCE` — When a factory creates new evidence
 - `ADD_VERSION` — When a factory adds a new version
 - `DELETE_EVIDENCE` — When a factory deletes evidence
+- `CREATE_REQUEST` — When a buyer creates a request 🆕
+- `VIEW_REQUESTS` — When a factory views their requests 🆕
+- `FULFILL_ITEM` — When a factory fulfills a request item 🆕
 
 ---
 
@@ -340,10 +604,14 @@ npm run test:cov
 - `User` — User accounts with roles (buyer, factory, admin)
 - `Evidence` — Compliance documents owned by factories
 - `EvidenceVersion` — Version history for evidence documents
+- `Request` — Buyer requests for factory evidence (Task AA) 🆕
+- `RequestItem` — Individual items within a request (Task AA) 🆕
 - `AuditLog` — Immutable audit trail for all actions
 
 **Relationships:**
 - Evidence has many Versions (one-to-many, cascade delete)
+- Request has many RequestItems (one-to-many, cascade delete) 🆕
+- RequestItem references Evidence and EvidenceVersion (optional, for fulfillment) 🆕
 - All entities linked via UUID primary keys
 - SQLite for development, easily portable to PostgreSQL
 
@@ -381,6 +649,10 @@ npm run test:cov
 - ✅ Adding versions to evidence
 - ✅ Factory isolation (cannot access other factory's data)
 - ✅ Role-based access (buyers blocked from evidence endpoints)
+- ✅ Buyer request creation with multiple items (Task AA) 🆕
+- ✅ Factory viewing assigned requests (Task AA) 🆕
+- ✅ Factory fulfilling request items (Task AA) 🆕
+- ✅ Automatic request completion logic (Task AA) 🆕
 - ✅ Audit trail for all operations
 - ✅ Authentication and authorization flows
 - ✅ Input validation and error cases

@@ -3,8 +3,9 @@ import { Env } from './env';
 import { User } from '../../user/entities/user.entity';
 import { Evidence, EvidenceVersion } from '../../evidence/entities';
 import { AuditLog } from '../../audit/entities';
+import { Request, RequestItem } from '../../request/entities';
 
-export const entities = [User, Evidence, EvidenceVersion, AuditLog];
+export const entities = [User, Evidence, EvidenceVersion, AuditLog, Request, RequestItem];
 
 export const databaseConfig: TypeOrmModuleOptions = {
   type: 'sqlite',

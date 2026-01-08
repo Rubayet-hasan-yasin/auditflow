@@ -11,6 +11,11 @@ describe('Evidence API (e2e)', () => {
   let buyerToken: string;
   let evidenceId: string;
 
+  const timestamp = Date.now();
+  const factory1Email = `factory1-${timestamp}@example.com`;
+  const factory2Email = `factory2-${timestamp}@example.com`;
+  const buyerEmail = `buyer-${timestamp}@example.com`;
+
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -26,30 +31,41 @@ describe('Evidence API (e2e)', () => {
     );
     await app.init();
 
-    // Login as factory1
+    // Register factory1
     const factory1Response = await request(app.getHttpServer())
-      .post('/auth/login')
+      .post('/auth/register')
       .send({
-        email: 'factory1@auditflow.com',
-        password: 'factory123',
+        email: factory1Email,
+        password: 'Password123!',
+        firstName: 'Factory',
+        lastName: 'One',
+        role: 'factory',
+        factoryId: 'F001',
       });
     factoryToken = factory1Response.body.accessToken;
 
-    // Login as factory2
+    // Register factory2
     const factory2Response = await request(app.getHttpServer())
-      .post('/auth/login')
+      .post('/auth/register')
       .send({
-        email: 'factory2@auditflow.com',
-        password: 'factory123',
+        email: factory2Email,
+        password: 'Password123!',
+        firstName: 'Factory',
+        lastName: 'Two',
+        role: 'factory',
+        factoryId: 'F002',
       });
     factory2Token = factory2Response.body.accessToken;
 
-    // Login as buyer
+    // Register buyer
     const buyerResponse = await request(app.getHttpServer())
-      .post('/auth/login')
+      .post('/auth/register')
       .send({
-        email: 'buyer@auditflow.com',
-        password: 'buyer123',
+        email: buyerEmail,
+        password: 'Password123!',
+        firstName: 'John',
+        lastName: 'Buyer',
+        role: 'buyer',
       });
     buyerToken = buyerResponse.body.accessToken;
   });

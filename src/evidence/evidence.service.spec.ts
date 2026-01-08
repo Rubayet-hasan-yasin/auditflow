@@ -28,7 +28,7 @@ describe('EvidenceService', () => {
   const mockVersion: EvidenceVersion = {
     id: 'version-1',
     evidenceId: 'evidence-123',
-    versionNumber: 1,
+    version: 1,
     notes: 'Initial',
     expiry: '2026-12-31',
     createdAt: new Date(),
@@ -157,7 +157,7 @@ describe('EvidenceService', () => {
       const newVersion: EvidenceVersion = {
         ...mockVersion,
         id: 'version-2',
-        versionNumber: 2,
+        version: 2,
         notes: dto.notes,
       };
 

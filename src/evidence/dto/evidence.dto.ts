@@ -19,10 +19,8 @@ export class CreateEvidenceDto {
 
 export class AddEvidenceVersionDto {
   @IsString()
-  @IsNotEmpty()
-  notes: string;
+  notes?: string;
 
-  @IsDateString()
-  @IsNotEmpty()
-  expiry: string;
+  @IsString()
+  expiry?: string;
 }

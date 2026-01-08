@@ -17,13 +17,13 @@ export class EvidenceVersion {
   evidenceId: string;
 
   @Column()
-  versionNumber: number;
+  version: number;
 
-  @Column()
-  notes: string;
-
-  @Column()
+  @Column({ nullable: true })
   expiry: string;
+
+  @Column({ type: 'text', nullable: true })
+  notes: string;
 
   @CreateDateColumn()
   createdAt: Date;

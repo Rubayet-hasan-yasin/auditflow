@@ -11,6 +11,7 @@ export enum AuditAction {
   DELETE_EVIDENCE = 'DELETE_EVIDENCE',
   CREATE_REQUEST = 'CREATE_REQUEST',
   FULFILL_ITEM = 'FULFILL_ITEM',
+  VIEW_REQUESTS = 'VIEW_REQUESTS',
 }
 
 export enum AuditObjectType {
